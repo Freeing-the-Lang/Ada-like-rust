@@ -1,0 +1,8 @@
+[package]
+name = "ada-like-rust"
+version = "0.1.0"
+edition = "2021"
+description = "Ada-like semantics on Rust playground"
+license = "MIT"
+
+[dependencies]
