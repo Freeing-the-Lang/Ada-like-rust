@@ -1,4 +1,4 @@
-name: "🏛️ Ada-like-Rust — Multi-OS Build & ProofLedger Release"
+name: "🏛️ Ada-like-Rust — 3OS Build & ProofLedger Release"
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     types: [ closed ]
   workflow_dispatch:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "0 6 * * *"  # 매일 6시 자동 빌드
 
 permissions:
   contents: write
@@ -33,27 +33,43 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: "⚙️ Build Ada-like-Rust"
+        shell: bash
         run: |
+          set -e
           cargo build --release
-          echo "✅ Build completed on ${{ runner.os }}"
           mkdir -p dist
-          cp target/release/ada-like-rust* dist/ || true
+          if [ -f target/release/ada-like-rust ]; then
+            cp target/release/ada-like-rust dist/
+          elif [ -f target/release/ada-like-rust.exe ]; then
+            cp target/release/ada-like-rust.exe dist/
+          fi
+          echo "✅ Build completed on ${{ runner.os }}"
 
       - name: "📜 Generate ProofLedger"
         shell: bash
         run: |
-          echo "ProofLedger — $(date)" > proofledger.txt
-          sha256sum dist/* >> proofledger.txt 2>/dev/null || certutil -hashfile dist\\*.exe SHA256 >> proofledger.txt || true
+          set -e
+          echo "ProofLedger — $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > proofledger.txt
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum dist/* >> proofledger.txt
+          elif command -v shasum >/dev/null 2>&1; then
+            shasum -a 256 dist/* >> proofledger.txt
+          elif command -v certutil >/dev/null 2>&1; then
+            for f in dist/*; do
+              h=$(certutil -hashfile "$f" SHA256 | sed -n '2p' | tr -d '\r')
+              echo "$h  $f" >> proofledger.txt
+            done
+          fi
           cat proofledger.txt
 
       - name: "🚀 Create GitHub Release"
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: "Ada-like-Rust v1.0.${{ github.run_number }}"
+          tag_name: v1.${{ github.run_number }}
+          name: "Ada-like-Rust v1.${{ github.run_number }}"
           body: |
-            🧩 Ada-like-Rust build release (auto-generated)
+            🧩 Ada-like-Rust build (3OS auto-generated)
             - OS: ${{ runner.os }}
             - ProofLedger included
           files: |
