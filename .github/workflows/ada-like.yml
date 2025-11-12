@@ -7,7 +7,7 @@ on:
     types: [ closed ]
   workflow_dispatch:
   schedule:
-    - cron: "0 6 * * *" # 매일 오전 6시 자동 빌드
+    - cron: "0 6 * * *"
 
 permissions:
   contents: write
@@ -29,10 +29,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: "🔧 Setup Rust Environment"
-        uses: actions/setup-rust@v1
-        with:
-          rust-version: stable
+      - name: "🔧 Setup Rust Toolchain"
+        uses: dtolnay/rust-toolchain@stable
 
       - name: "⚙️ Build Ada-like-Rust"
         run: |
