@@ -1,0 +1,63 @@
+name: "🏛️ Ada-like-Rust — Multi-OS Build & ProofLedger Release"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    types: [ closed ]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *" # 매일 오전 6시 자동 빌드
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ada-like-rust-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-3os:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: "🧭 Checkout Repository"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "🔧 Setup Rust Environment"
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: stable
+
+      - name: "⚙️ Build Ada-like-Rust"
+        run: |
+          cargo build --release
+          echo "✅ Build completed on ${{ runner.os }}"
+          mkdir -p dist
+          cp target/release/ada-like-rust* dist/ || true
+
+      - name: "📜 Generate ProofLedger"
+        shell: bash
+        run: |
+          echo "ProofLedger — $(date)" > proofledger.txt
+          sha256sum dist/* >> proofledger.txt 2>/dev/null || certutil -hashfile dist\\*.exe SHA256 >> proofledger.txt || true
+          cat proofledger.txt
+
+      - name: "🚀 Create GitHub Release"
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Ada-like-Rust v1.0.${{ github.run_number }}"
+          body: |
+            🧩 Ada-like-Rust build release (auto-generated)
+            - OS: ${{ runner.os }}
+            - ProofLedger included
+          files: |
+            dist/*
+            proofledger.txt
